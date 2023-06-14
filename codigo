@@ -1,0 +1,58 @@
+import datetime
+class Arquivo:
+
+    def __init__(self, nome, descricao, tamanho, conteudo, data):
+        self.nome = nome
+        self.descricao = descricao
+        self.tamanho = tamanho
+        self.conteudo = conteudo
+        self.data = data
+
+    def __str__(self):
+        return f'''
+Nome: {self.nome}
+Descrição: {self.descricao}
+Tamanho: {self.tamanho}
+Conteudo: {self.conteudo}
+Data de criação: {self.data}'''
+
+class Diretorio:
+    def __init__(self, nome):
+        self.tail = None
+        self.head = None
+        self.nome = nome
+        self.arquivos = []
+        self.subdiretorios = []
+
+    def adicionar_subdiretorio(self, subdiretorio):
+        self.subdiretorios.append(subdiretorio)
+    def adicionar_arquivo(self, arquivo):
+        self.arquivos.append(arquivo)
+
+    def imprimir_subdiretorios(self):
+        for subdiretorio in self.subdiretorios:
+            print(subdiretorio.nome)
+            subdiretorio.imprimir_subdiretorios()
+
+
+foto1 = Arquivo('Zeus', 'Pássaro fotografado', 32, 'imagem', datetime.datetime.now())
+
+raiz = Diretorio('Raíz')
+imagens = Diretorio('Imagens')
+downloads = Diretorio('Downloads')
+documentos = Diretorio('Documentos')
+screenshots = Diretorio('Screenshots')
+salvas = Diretorio('Imagens Salvas')
+
+raiz.adicionar_subdiretorio(imagens)
+raiz.adicionar_subdiretorio(downloads)
+raiz.adicionar_subdiretorio(documentos)
+
+imagens.adicionar_arquivo(foto1)
+imagens.adicionar_subdiretorio(screenshots)
+imagens.adicionar_subdiretorio(salvas)
+
+
+print(foto1)
+
+raiz.imprimir_subdiretorios()
