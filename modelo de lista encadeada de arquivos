@@ -1,0 +1,99 @@
+import datetime
+class Arquivo:
+
+    def __init__(self, nome, tipo, descricao, tamanho, conteudo, data):
+        self.nome = nome
+        self.tipo = tipo
+        self.descricao = descricao
+        self.tamanho = tamanho
+        self.conteudo = conteudo
+        self.data = data
+        self.prox = None
+
+    def __str__(self):
+        return f'''
+Nome: {self.nome}
+Descrição: {self.descricao}
+Tamanho: {self.tamanho}
+Conteudo: {self.conteudo}
+Data de criação: {self.data}'''
+
+class Diretorio:
+    def __init__(self, nome, tipo):
+        self.nome = nome
+        self.tipo = tipo
+        self.head = None
+        self.tail = None
+
+    def adicionar_arquivo(self, arquivo):
+
+        if self.head == None:
+            self.head = self.tail = arquivo
+        else:
+            self.tail.prox = arquivo
+            self.tail = arquivo
+
+    def remover_arquivo(self, arquivo):
+        atual = self.head
+
+        if self.head == None:
+            return 'Diretório não contêm arquivos'
+        elif self.head.nome == arquivo:
+            self.head = self.head.prox
+        else:
+            while atual.prox.nome != arquivo or atual is not None:
+                atual = atual.prox
+
+            if atual is None:
+                return 'Arquivo não existe'
+            else:
+                if self.tail == atual.prox:
+                    self.tail = atual
+                    atual.prox = None
+                else:
+                    atual.prox = atual.prox.prox
+
+    def buscar(self, elemento):
+
+        atual = self.head
+
+        while atual is not None and atual.nome != elemento:
+            atual = atual.prox
+        if atual is None:
+            return 'Arquivo não encontrado'
+        else:
+            return atual
+
+    def listar_arquivos(self):
+        atual = self.head
+
+        while atual is not None:
+            if atual.tipo == 'arquivo':
+                if atual.prox is None:
+                    print(atual.nome)
+                else:
+                    print(atual.nome, end=' - ')
+            atual = atual.prox
+
+foto1 = Arquivo('Zeus', 'arquivo', 'Deus da mitologia', 32, 'imagem', datetime.datetime.now())
+foto2 = Arquivo('Paisagem', 'arquivo', 'Vales verdejantes', 133, 'imagem', datetime.datetime.now())
+
+raiz = Diretorio('Raíz', 'diretorio')
+imagens = Diretorio('Imagens', 'diretorio')
+downloads = Diretorio('Downloads', 'diretorio')
+documentos = Diretorio('Documentos', 'diretorio')
+screenshots = Diretorio('Screenshots', 'diretorio')
+salvas = Diretorio('Imagens Salvas', 'diretorio')
+
+raiz.adicionar_arquivo(imagens)
+raiz.adicionar_arquivo(downloads)
+raiz.adicionar_arquivo(documentos)
+
+imagens.adicionar_arquivo(foto1)
+imagens.adicionar_arquivo(screenshots)
+imagens.adicionar_arquivo(salvas)
+imagens.adicionar_arquivo(foto2)
+
+imagens.head = foto1
+
+imagens.listar_arquivos()
