@@ -1,4 +1,6 @@
 import datetime
+import cryptocode
+
 
 class Diretorio:
     def __init__(self, nome="", tipo="Diretorio"):
@@ -7,6 +9,7 @@ class Diretorio:
     
     def __str__(self):
         return f"Nome: {self.nome}\nTipo: {self.tipo}"
+
 
 class Arquivo:
     def __init__(self, nome="", tipo="", tamanho=0, conteudo=""):
@@ -18,6 +21,9 @@ class Arquivo:
 
     def __str__(self):
         return f"Nome: {self.nome}\nTipo: {self.tipo}\nTamanho: {self.tamanho} bytes\nData de Criação: {self.data}\n"
+
+    def get_conteudo_criptografado(self):
+        return self.conteudo
 
 
 class HashTable:
@@ -52,15 +58,38 @@ class HashTable:
                 print(arquivo)
 
 
+class Seguranca:
+    def __init__(self, arquivo, chave):
+        self.arquivo = arquivo
+        self.chave = chave
+        self.criptografia = None
+
+    def encriptar(self):
+        self.criptografia = cryptocode.encrypt(self.chave, self.arquivo.conteudo)
+        self.arquivo.conteudo = self.criptografia
+
+    def desencriptar(self):
+        conteudo_descriptografado = cryptocode.decrypt(self.chave, self.arquivo.conteudo)
+        if conteudo_descriptografado is not None:
+            self.arquivo.conteudo = conteudo_descriptografado
+
+    def __str__(self):
+        return f"Arquivo: {self.arquivo}\nChave: {self.chave}"
+
+
 root = Diretorio("~")
 arquivo1 = Arquivo("Arquivo1.txt", "txt", 100, "Conteúdo do arquivo 1")
 arquivo2 = Arquivo("Arquivo2.jpg", "jpg", 200, "Conteúdo do arquivo 2")
 arquivo3 = Arquivo("Arquivo3.docx", "docx", 150, "Conteúdo do arquivo 3")
-tabela_hash = HashTable(10)
+arquivoenc = Seguranca(arquivo1, '223131')
+arquivoenc.encriptar()
+print(arquivo1.get_conteudo_criptografado())
+print(arquivoenc)
 
-# tabela_hash.adicionar_arquivo(root)
-# tabela_hash.adicionar_arquivo(arquivo1)
-# tabela_hash.adicionar_arquivo(arquivo2)
-# tabela_hash.adicionar_arquivo(arquivo3)
+tabela_hash = HashTable(10)
+tabela_hash.adicionar_arquivo(root)
+tabela_hash.adicionar_arquivo(arquivo1)
+tabela_hash.adicionar_arquivo(arquivo2)
+tabela_hash.adicionar_arquivo(arquivo3)
 
 tabela_hash.listar_arquivos()
