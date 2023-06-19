@@ -1,0 +1,166 @@
+import cryptocode
+import datetime
+
+
+class Diretorio:
+    def __init__(self, nome="", tipo="Diretorio"):
+        self.nome = nome
+        self.tipo = tipo
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}"
+
+class Arquivo:
+    def __init__(self, nome="", tipo="", tamanho=0, conteudo=""):
+        self.nome = nome
+        self.tipo = tipo
+        self.tamanho = tamanho
+        self.conteudo = conteudo
+        self.data = datetime.datetime.now()
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}\nTamanho: {self.tamanho} bytes\nData de Criação: {self.data}\n"
+
+class HashTable:
+    def __init__(self, size):
+        self.size = size
+        self.table = [[] for _ in range(size)]
+
+    def _hash_function(self, key):
+        return hash(key) % self.size
+
+    def adicionar_arquivo(self, arquivo):
+        index = self._hash_function(arquivo.nome)
+        self.table[index].append(arquivo)
+
+    def remover_arquivo(self, arquivo):
+        index = self._hash_function(arquivo.nome)
+        for i, file in enumerate(self.table[index]):
+            if file.nome == arquivo.nome:
+                self.table[index].pop(i)
+                break
+
+    def buscar(self, nome):
+        index = self._hash_function(nome)
+        for arquivo in self.table[index]:
+            if arquivo.nome == nome:
+                return arquivo
+        return None
+
+    def listar_arquivos(self):
+        for slot in self.table:
+            for arquivo in slot:
+                print(arquivo,'\n')
+
+class ChaveCriptografiaInexistente(Exception):
+    def __init__(self, mensagem="Chave de criptografia inexistente"):
+        self.mensagem = mensagem
+        super().__init__(self.mensagem)
+class ChaveCriptografia(Arquivo):
+    def __init__(self, chave=None, arquivo=Arquivo):
+        super().__init__(nome="", tipo="", tamanho=0, conteudo="")
+        self.chave = chave
+        self.arquivo = arquivo
+        self.data_criacao = datetime.datetime.now()
+        self.validade = self.data_criacao + datetime.timedelta(days=5)
+        self.arquivo_criptografado = ''
+
+    @property
+    def chave(self):
+        return self.__chave
+
+    @chave.setter
+    def chave(self, chave):
+        self.__chave = chave
+        return self.__chave
+
+    @property
+    def arquivo(self):
+        return self.__arquivo
+
+    @arquivo.setter
+    def arquivo(self, Arquivo):
+        self.__arquivo = Arquivo
+
+    @property
+    def arquivo_criptografado(self):
+        return self.__arquivo_criptografado
+
+    @arquivo_criptografado.setter
+    def arquivo_criptografado(self, arquivo):
+        self.__arquivo_criptografado = arquivo
+        return self.__arquivo_criptografado
+
+    def criptografar(self):
+        if self.chave is None:
+            raise ChaveCriptografiaInexistente("Chave de criptografia inexistente")
+
+        self.arquivo_criptografado = cryptocode.encrypt(self.arquivo.nome, self.chave)
+        return self.arquivo_criptografado
+
+    def descriptografar(self):
+        self.arquivo = cryptocode.decrypt(self.arquivo_criptografado, self.chave)
+        return self.arquivo
+
+    def __str__(self):
+        return f'{self.arquivo}'
+
+
+class SistemaArquivos(HashTable, ChaveCriptografia):
+    def __init__(self, size):
+        super().__init__(size)
+
+    def adicionar_arquivo(self, arquivo_criptografado, chave):
+        index = self._hash_function(arquivo_criptografado)
+        self.table[index].append(arquivo_criptografado)
+        banco_de_chaves = SistemaArquivos(self.size)
+        index = banco_de_chaves._hash_function(chave)
+        self.table[index].append(chave)
+        print('Arquivo adicionado com êxito.')
+
+
+    def listar_arquivos(self):
+        for slot in self.table:
+            for arquivo_criptografado in slot:
+                print(arquivo_criptografado)
+
+
+    def criptografar_chave(self):
+        chave_criptografada = cryptocode.encrypt(self.chave, self.chave)
+        return chave_criptografada
+
+    def decriptar(self, ):
+        pass
+
+if __name__ == '__main__':
+    arquivo1 = Arquivo("Paisagem", "png", 20, "Foto de paisagem")
+    arquivo1_crp = ChaveCriptografia('chave', arquivo1)
+
+    arquivo2 = Arquivo('Ronaldo', 'txt', 20, 'ronald')
+    arquivo2_crp = ChaveCriptografia("riobaldo", arquivo2)
+
+    arquivo3 = Arquivo('Peixe', 'jpg', 14, "Foto de um peixe")
+    arquivo3_crp = ChaveCriptografia('tilapia', arquivo3)
+
+    arquivo1_crp.criptografar()
+    arquivo2_crp.criptografar()
+    arquivo3_crp.criptografar()
+
+    print('----------------------------------')
+    Banco_de_dados = SistemaArquivos(8)
+    Banco_de_dados.adicionar_arquivo(arquivo1_crp.arquivo_criptografado, arquivo1_crp.chave)
+    Banco_de_dados.adicionar_arquivo(arquivo2_crp.arquivo_criptografado, arquivo2_crp.chave)
+    Banco_de_dados.adicionar_arquivo(arquivo3_crp.arquivo_criptografado, arquivo3_crp.chave)
+    print('')
+    print('Chaves e seus respectivos arquivos criptografados:')
+    print('')
+    Banco_de_dados.listar_arquivos()
+
+    root = Diretorio("Raíz")
+    tabela_hash = HashTable(4)
+    tabela_hash.adicionar_arquivo(root)
+    tabela_hash.adicionar_arquivo(arquivo1)
+    tabela_hash.adicionar_arquivo(arquivo2)
+    tabela_hash.adicionar_arquivo(arquivo3)
+
+    tabela_hash.listar_arquivos()
