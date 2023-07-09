@@ -1,0 +1,179 @@
+import datetime
+import cryptocode
+
+
+# Alguns comentários importantes:
+   # Para armazenar os itens criptografados estou usando uma tabela Hash e o primeiro item adicionado nessa tabela é o diretorio (+)
+   # para que possa ser feita uma busca por diretorio e exibir os itens que tem o diretorio com aquele nome (+)
+   # exemplo : [ [], [], [jogadores, xxxx,xxxx] ] . Perceba que o diretorio jogadores não é criptografado.
+# contudo temos um problema para descriptografar:
+   #ao acessar a sublista que contém os arquivos criptografados para realizar a descriptografia (+)
+   #o sistema acusa que todos os itens são um só, ou seja, len = 1 (+)
+   #ao tentar fazer algum tipo de split ou manipulação o sistema acusa erro (+)
+#revogar funcionando normalmente, talvez deva implementar a exclusão dos arquivos após a revogação
+#Nesse código não está a classe Interface, mas ela será integrada com o resto do código.
+
+#Então, em resumo, o código criptografa arquivos, cria chaves, revoga, mas há o problema na descriptografia.
+
+
+class Diretorio:
+    def __init__(self, nome="", tipo="Diretorio"):
+        self.nome = nome
+        self.tipo = tipo
+        self.subdiretorios = []
+        self.arquivos = []
+
+    def adicionar_subdiretorio(self, subdiretorio):
+        self.subdiretorios.append(subdiretorio)
+
+    def adicionar_arquivo(self, arquivo):
+        self.arquivos.append(arquivo)
+
+    def listar_subdiretorios(self):
+        for subdiretorio in self.subdiretorios:
+            print(subdiretorio)
+
+    def listar_arquivos(self):
+        for arquivo in self.arquivos:
+            print(arquivo)
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}"
+
+
+class Arquivo:
+    def __init__(self, nome="", tipo="", descricao = 'descricao', tamanho=0, conteudo="", diretorio=None):
+        self.nome = nome
+        self.tipo = tipo
+        self.descricao = descricao
+        self.tamanho = tamanho
+        self.conteudo = conteudo
+        self.data = datetime.datetime.now()
+        self.diretorio = diretorio
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}\nDescrição: {self.descricao}\nTamanho: {self.tamanho} bytes\nData de Criação: {self.data}\nDiretório: {self.diretorio}"
+
+
+class HashTable:
+    def __init__(self, size):
+        self.size = size
+        self.table = [[] for _ in range(size)]
+
+    def _hash_function(self, key):
+        return hash(key) % self.size
+
+    def adicionar_arquivo(self, arquivo):
+        index = self._hash_function(arquivo.nome)
+        self.table[index].append(arquivo)
+
+    def remover_arquivo(self, arquivo):
+        index = self._hash_function(arquivo.nome)
+        for i, file in enumerate(self.table[index]):
+            if file.nome == arquivo.nome:
+                self.table[index].pop(i)
+                break
+
+    def buscar(self, nome):
+        index = self._hash_function(nome)
+        for arquivo in self.table[index]:
+            if arquivo.nome == nome:
+                return arquivo
+        return None
+
+    def listar_arquivos(self):
+        for slot in self.table:
+            for arquivo in slot:
+                print(arquivo)
+                print()
+
+
+
+
+class ChaveCriptografiaInexistente(Exception):
+    def __init__(self, mensagem="Chave de criptografia inexistente"):
+        self.mensagem = mensagem
+        super().__init__(self.mensagem)
+
+class ChaveCriptografia:
+    def __init__(self, chave, criacao = datetime.datetime.now()):
+        self.chave = chave
+        self.data_criacao = criacao
+        self.validade = self.data_criacao + datetime.timedelta(days=1)
+
+class SistemaArquivos(HashTable):
+    def __init__(self, chave : object, size):
+        super().__init__(size)
+        self.chave = ChaveCriptografia(chave)
+        self.arquivo_crp = None
+
+    def criptografar (self, arquivo : object):
+       
+        arq_nome = cryptocode.encrypt(arquivo.nome, self.chave.chave)
+        arq_tipo = cryptocode.encrypt(arquivo.tipo, self.chave.chave)
+        arq_descricao = cryptocode.encrypt(arquivo.descricao, self.chave.chave)
+        arq_tamanho = cryptocode.encrypt(arquivo.tamanho, self.chave.chave)
+        arq_conteudo = cryptocode.encrypt(arquivo.conteudo, self.chave.chave)
+        index = self._hash_function(arquivo.diretorio)
+        lista = [arquivo.diretorio, arq_nome, arq_tipo, arq_descricao, arq_tamanho,arq_conteudo]
+        self.table[index].append(lista)
+        print('Arquivo criptografado e salvo')
+
+    def descriptografar(self, diretorio):
+        #problema para acessa a sublista que contém os arquivos criptografados
+        #ao tentar acessar o sistema acusa que todos os itens são um só len = 1
+        index = self._hash_function(diretorio)
+        # esse if seria a condição de parada para a função recursiva abaixo, mas está errado por isso está comentado por enquanto
+        #if self.table[index] != self.table[index[0]]:
+        #   return None
+        for diretorio in self.table[index]:
+            for arquivo in diretorio:
+                arquivo[1] = cryptocode.decrypt(diretorio[1], self.chave.chave)
+                print('teste')
+        return self.descriptografar(diretorio)
+
+
+    def revogar_chave(self, chave):
+        #revogar funcionando normalmente, talvez deva implementar a exclusão dos arquivos após a revogação
+        if self.chave.validade < datetime.datetime.now():
+            print('Chave expirou, impossível acessar arquivos')
+            self.chave = None
+        validacao = input('Deseja revogar a chave?(s ou n): ')
+        if validacao == 's':
+            self.chave = None
+        elif validacao == 'n':
+            print('Chave permanece inalterada')
+        else:
+            print('opção inválida')
+
+
+    # método está desatualizado, pois a classe atualmente não possui tais atributos, será atualizado
+    def __str__(self):
+        return f"Nome: {self.arquivo}\nTipo: {self.tipo}\nTamanho: {self.tamanho} bytes\nConteúdo: {self.conteudo}\nDiretório: {self.diretorio}"
+
+if __name__ == '__main__':
+    try:
+        teste = Arquivo('ronaldo', 'txt', 'Fênomeno', '98', 'Muito bom', 'jogadores')
+        teste1 = Arquivo('riobaldo', 'txt', 'Fênomeno', '98', 'Muito bom', 'jogadores')
+        sistema = SistemaArquivos('1998', 3)
+        sistema.criptografar(teste)
+        print(sistema.table)
+       # sistema.descriptografar('jogadores')
+        index = sistema._hash_function(teste.diretorio)
+        itens = sistema.table[index]
+        print(len(itens))
+        for item in itens:
+            print(item)
+
+
+
+    except ChaveCriptografiaInexistente as m:
+         print(m)
+   # except:
+    #     print ('Algo deu errado')
+
+
+
+  #  print(teste.arq_c)
+  #  teste.descriptografar()
+   # print(teste.arquivo)
