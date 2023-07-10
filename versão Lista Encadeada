@@ -1,0 +1,79 @@
+from datetime import datetime, timedelta
+import cryptocode
+
+class Diretorio:
+    def __init__(self, nome):
+        self.nome = nome
+        self.prox = None
+        self.baixo = None
+
+class Arquivo:
+    def __init__(self, nome="", tipo="", descricao='', tamanho=0, conteudo="", diretorio=None):
+        self.nome = nome
+        self.tipo = tipo
+        self.descricao = descricao
+        self.tamanho = tamanho
+        self.conteudo = conteudo
+        self.data = datetime.now()
+        self.diretorio = diretorio
+        self.prox = None
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}\nTamanho: {self.tamanho} bytes\nData de Criação: {self.data}\nDiretório: {self.diretorio}"
+
+class ChaveCriptografia:
+    def __init__(self, chave=''):
+        self.chave = chave
+        self.criacao = datetime.now()
+        self.validade = self.criacao + timedelta(days=180)
+
+class ListaEncadeada:
+    def __init__(self):
+        self.head = None
+        self.tail = None
+        self.baixo = None
+
+    def adicionar_diretorio(self, diretorio):
+        if self.head is None:
+            self.head = self.tail = Diretorio(diretorio.nome)
+            print('Diretório adicionado.')
+        else:
+            novo_diretorio = Diretorio(diretorio.nome)
+            self.tail.prox = novo_diretorio
+            self.tail = novo_diretorio
+            print('Diretório adicionado.')
+
+    def adicionar_arquivo(self, arquivo, diretorio):
+        atual = self.head
+
+        while atual is not None and atual.nome != diretorio.nome:
+            atual = atual.prox
+
+        if atual is None:
+            print('Diretório não encontrado')
+        else:
+            if atual.baixo is None:
+                atual.baixo = arquivo
+                print('Arquivo adicionado.')
+            else:
+                temp = atual.baixo
+                while temp.prox is not None:
+                    temp = temp.prox
+                temp.prox = arquivo
+                print('Arquivo adicionado.')
+
+imagens = Diretorio('Imagens')
+
+foto = Arquivo('Zeus', 'arquivo', 'Imagem mitológica', 32, 'Deus da mitologia', imagens)
+foto2 = Arquivo('Paisagem', 'arquivo', 'Imagem de paisagem', 95, 'Lago', imagens)
+foto3 = Arquivo('Coca-Cola', 'arquivo', 'Imagem de refrigerante', 12, 'Lata de coca', imagens)
+foto4 = Arquivo('Pepsi', 'arquivo', 'Imagem de refrigerante', 12, 'Lata de pepsi', imagens)
+
+
+sistema = ListaEncadeada()
+sistema.adicionar_diretorio(imagens)
+
+sistema.adicionar_arquivo(foto, imagens)
+sistema.adicionar_arquivo(foto2, imagens)
+sistema.adicionar_arquivo(foto3, imagens)
+sistema.adicionar_arquivo(foto4, imagens)
