@@ -1,0 +1,210 @@
+import datetime
+import cryptocode
+
+
+class Diretorio:
+    def __init__(self, nome="", tipo="Diretorio"):
+        self.nome = nome
+        self.tipo = tipo
+        self.subdiretorios = []
+        self.arquivos = []
+
+    def adicionar_subdiretorio(self, subdiretorio):
+        self.subdiretorios.append(subdiretorio)
+
+    def adicionar_arquivo(self, arquivo):
+        self.arquivos.append(arquivo)
+
+    def listar_subdiretorios(self):
+        for subdiretorio in self.subdiretorios:
+            print(subdiretorio)
+
+    def listar_arquivos(self):
+        for arquivo in self.arquivos:
+            print(arquivo)
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}"
+
+
+class Arquivo:
+    def __init__(self, nome="", tipo="", descricao='descricao', tamanho=0, conteudo="", diretorio=None):
+        self.nome = nome
+        self.tipo = tipo
+        self.descricao = descricao
+        self.tamanho = tamanho
+        self.conteudo = conteudo
+        self.data = datetime.datetime.now()
+        self.diretorio = diretorio
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}\nDescrição: {self.descricao}\nConteúdo: {self.conteudo}\nTamanho: {self.tamanho} bytes\nData de Criação: {self.data}\nDiretório: {self.diretorio}"
+
+
+class HashTable:
+    def __init__(self, size):
+        self.size = size
+        self.table = [[] for _ in range(size)]
+
+    def _hash_function(self, key):
+        return hash(key) % self.size
+
+    def adicionar_arquivo(self, arquivo):
+        index = self._hash_function(arquivo.nome)
+        self.table[index].append(arquivo)
+
+    def buscar(self, diretorio, nome):
+        index = self._hash_function(diretorio)
+        for arquivo in self.table[index]:
+            if arquivo.nome == nome:
+                return arquivo
+        return None
+
+    def remover_arquivo(self, diretorio=None):
+        index = self._hash_function(diretorio)
+        if self.table[index] is not None:
+            for i, file in enumerate(self.table[index]):
+                if file.diretorio == diretorio:
+                    self.table[index].pop(i)
+                    return self.remover_arquivo(diretorio)
+
+    def listar_arquivos(self):
+        for slot in self.table:
+            for arquivo in slot:
+                print(arquivo)
+                print()
+
+
+class ChaveCriptografiaInexistente(Exception):
+    def __init__(self, mensagem="Chave de criptografia inexistente"):
+        self.mensagem = mensagem
+        super().__init__(self.mensagem)
+
+
+class ChaveCriptografia:
+    def __init__(self, chave, criacao=datetime.datetime.now()):
+        self.chave = chave
+        self.data_criacao = criacao
+        self.validade = self.data_criacao + datetime.timedelta(days=1)
+
+
+class SistemaArquivos(HashTable, Diretorio):
+    def __init__(self, chave: object, size):
+        super().__init__(size)
+        self.chave = ChaveCriptografia(chave)
+
+    def criptografar(self, arquivo: object):
+        index = self._hash_function(arquivo.diretorio)
+        arquivo.conteudo = cryptocode.encrypt(arquivo.conteudo, self.chave.chave)
+        self.table[index].append(arquivo)
+        print('Arquivo criptografado e salvo')
+
+    def descriptografar(self, diretorio):
+        index = self._hash_function(diretorio)
+        for arquivo in self.table[index]:
+            arquivo.conteudo = cryptocode.decrypt(arquivo.conteudo, self.chave.chave)
+
+    def revogar_chave(self):
+        if self.chave.validade < datetime.datetime.now():
+            print('Chave expirou, impossível acessar arquivos')
+            self.chave = None
+        validacao = input('Deseja revogar a chave? (s ou n): ')
+        if validacao == 's':
+            self.chave = None
+            self.remover_arquivo()
+        elif validacao == 'n':
+            print('Chave permanece inalterada')
+        else:
+            print('Opção inválida')
+
+    def buscar(self, nome):
+        for slot in self.table:
+            for arquivo in slot:
+                if arquivo.nome == nome:
+                    return arquivo
+
+    def __str__(self):
+        output = ""
+        for slot in self.table:
+            for arquivo in slot:
+                output += str(arquivo) + "\n\n"
+        return output
+
+
+
+def exibir_menu():
+    print("=== Sistema de Arquivos ===")
+    print("1. Criar arquivo")
+    print("2. Criptografar arquivo")
+    print("3. Descriptografar arquivo")
+    print("4. Remover arquivo")
+    print("5. Listar arquivos")
+    print("6. Sair")
+
+
+def criar_arquivo():
+    nome = input("Digite o nome do arquivo: ")
+    tipo = input("Digite o tipo do arquivo: ")
+    descricao = input("Digite a descrição do arquivo: ")
+    tamanho = input("Digite o tamanho do arquivo em bytes: ")
+    conteudo = input("Digite o conteúdo do arquivo: ")
+    diretorio = input("Digite o diretório do arquivo: ")
+
+    return Arquivo(nome, tipo, descricao, tamanho, conteudo, diretorio)
+
+
+def main():
+    chave = input("Digite a chave de criptografia: ")
+    sistema = SistemaArquivos(chave, 5)
+
+    while True:
+        exibir_menu()
+        opcao = input("Escolha uma opção: ")
+
+        if opcao == "1":
+            arquivo = criar_arquivo()
+            sistema.adicionar_arquivo(arquivo)
+            print("Arquivo criado com sucesso!")
+
+        elif opcao == "2":
+            nome = input("Digite o nome do arquivo a ser criptografado: ")
+            arquivo = sistema.buscar(nome)
+            if arquivo:
+                sistema.criptografar(arquivo)
+                print("Arquivo criptografado com sucesso!")
+            else:
+                print("Arquivo não encontrado.")
+
+        elif opcao == "3":
+            nome = input("Digite o nome do arquivo a ser descriptografado: ")
+            arquivo = sistema.buscar(nome)
+            if arquivo:
+                sistema.descriptografar(arquivo.diretorio)
+                print("Arquivo descriptografado com sucesso!")
+            else:
+                print("Arquivo não encontrado.")
+
+        elif opcao == "4":
+            nome = input("Digite o nome do arquivo a ser removido: ")
+            arquivo = sistema.buscar(nome)
+            if arquivo:
+                sistema.remover_arquivo(arquivo.diretorio)
+                print("Arquivo removido com sucesso!")
+            else:
+                print("Arquivo não encontrado.")
+
+        elif opcao == "5":
+            sistema.listar_arquivos()
+
+        elif opcao == "6":
+            print("Encerrando o programa...")
+            break
+
+        else:
+            print("Opção inválida. Digite uma opção válida.")
+
+        print()
+
+if __name__ == '__main__':
+    main()
+
