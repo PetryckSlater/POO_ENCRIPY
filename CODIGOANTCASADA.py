@@ -123,7 +123,8 @@ def exibir_menu():
     print("3. Descriptografar arquivo")
     print("4. Remover arquivo")
     print("5. Listar arquivos")
-    print("6. Sair")
+    print('6 Revogar chave')
+    print("7. Sair")
 
 
 def criar_arquivo():
@@ -180,7 +181,10 @@ def main():
         elif opcao == "5":
             sistema.listar_arquivos()
 
-        elif opcao == "6":
+        elif opcao == '6':
+            sistema.revogar_chave()
+
+        elif opcao == "7":
             print("Encerrando o programa...")
             break
 
