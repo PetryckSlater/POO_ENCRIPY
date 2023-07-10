@@ -17,9 +17,10 @@ class Arquivo:
         self.data = datetime.now()
         self.diretorio = diretorio
         self.prox = None
+        self.chave = None
 
     def __str__(self):
-        return f"Nome: {self.nome}\nTipo: {self.tipo}\nTamanho: {self.tamanho} bytes\nData de Criação: {self.data}\nDiretório: {self.diretorio}"
+        return f"Nome: {self.nome}\nTipo: {self.tipo}\nTamanho: {self.tamanho} bytes\nConteúdo: {self.conteudo}\nData de Criação: {self.data}\nDiretório: {self.diretorio.nome}"
 
 class ChaveCriptografia:
     def __init__(self, chave=''):
@@ -43,7 +44,7 @@ class ListaEncadeada:
             self.tail = novo_diretorio
             print('Diretório adicionado.')
 
-    def adicionar_arquivo(self, arquivo, diretorio):
+    def adicionar_arquivo(self, arquivo, diretorio, chave):
         atual = self.head
 
         while atual is not None and atual.nome != diretorio.nome:
@@ -54,26 +55,171 @@ class ListaEncadeada:
         else:
             if atual.baixo is None:
                 atual.baixo = arquivo
+                arquivo.chave = chave
                 print('Arquivo adicionado.')
             else:
-                temp = atual.baixo
-                while temp.prox is not None:
-                    temp = temp.prox
-                temp.prox = arquivo
+                arq = atual.baixo
+                while arq.prox is not None:
+                    arq = arq.prox
+                arq.prox = arquivo
+                arquivo.chave = chave
                 print('Arquivo adicionado.')
 
-imagens = Diretorio('Imagens')
+    def mostrar_diretorios(self):
+        atual = self.head
+        print('Diretórios atuais:')
+        while atual is not None:
+            print(atual.nome)
+            atual = atual.prox
 
-foto = Arquivo('Zeus', 'arquivo', 'Imagem mitológica', 32, 'Deus da mitologia', imagens)
+    def mostrar_arquivos(self, diretorio):
+        atual = self.head
+
+        while atual is not None and atual.nome != diretorio.nome:
+            atual = atual.prox
+        if atual is None:
+            print('Diretório não encontrado.')
+        else:
+            if atual.baixo is None:
+                print('O diretório não há arquivos.')
+            else:
+                atual = atual.baixo
+                while atual is not None:
+                    print(atual)
+                    print()
+                    atual = atual.prox
+
+
+class SistemaArquivos(ListaEncadeada):
+    def __init__(self, chave= None):
+        super().__init__()
+        self.chave = chave
+
+    def gerar_chave_criptografia(self):
+        self.chave = ChaveCriptografia(input('Digite a nova chave: '))
+        print('Chave criada.')
+
+    def revogar_chave(self):
+        self.chave = None
+        print('Chave revogada.')
+
+    def criar_diretorio(self, diretorio):
+        self.adicionar_diretorio(diretorio)
+
+    def gravar_arquivo_cifrado(self, arquivo: Arquivo, diretorio: Diretorio, chave: ChaveCriptografia):
+        self.criptografar(arquivo, chave)
+        self.adicionar_arquivo(arquivo, diretorio, chave)
+
+    def listar_diretorios(self):
+        self.mostrar_diretorios()
+
+    def criptografar(self, arquivo, chave):
+        if chave is not None:
+            arquivo.nome = cryptocode.encrypt(arquivo.nome, chave)
+            arquivo.tipo = cryptocode.encrypt(arquivo.tipo, chave)
+            arquivo.descricao = cryptocode.encrypt(arquivo.descricao, chave)
+            arquivo.tamanho = cryptocode.encrypt(str(arquivo.tamanho), chave)
+            arquivo.conteudo = cryptocode.encrypt(arquivo.conteudo, chave)
+
+    def descriptografar(self, arquivo):
+        if arquivo.chave == self.chave:
+            arquivo.nome = cryptocode.decrypt(arquivo.nome, self.chave)
+            arquivo.tipo = cryptocode.decrypt(arquivo.tipo, self.chave)
+            arquivo.descricao = cryptocode.decrypt(arquivo.descricao, self.chave)
+            arquivo.tamanho = cryptocode.decrypt(str(arquivo.tamanho), self.chave)
+            arquivo.conteudo = cryptocode.decrypt(arquivo.conteudo, self.chave)
+        elif arquivo.chave is not None:
+            arquivo.nome = cryptocode.decrypt(arquivo.nome, arquivo.chave)
+            arquivo.tipo = cryptocode.decrypt(arquivo.tipo, arquivo.chave)
+            arquivo.descricao = cryptocode.decrypt(arquivo.descricao, arquivo.chave)
+            arquivo.tamanho = cryptocode.decrypt(str(arquivo.tamanho), arquivo.chave)
+            arquivo.conteudo = cryptocode.decrypt(arquivo.conteudo, arquivo.chave)
+        else:
+            arquivo.nome = cryptocode.decrypt(arquivo.nome, arquivo.chave)
+            arquivo.tipo = cryptocode.decrypt(arquivo.tipo, arquivo.chave)
+            arquivo.descricao = cryptocode.decrypt(arquivo.descricao, arquivo.chave)
+            arquivo.tamanho = cryptocode.decrypt(str(arquivo.tamanho), arquivo.chave)
+            arquivo.conteudo = cryptocode.decrypt(arquivo.conteudo, arquivo.chave)
+
+    def listar_arquivos(self, diretorio: Diretorio):
+        atual = self.head
+
+        while atual is not None and atual.nome != diretorio.nome:
+            atual = atual.prox
+        if atual is None:
+            print('Diretório não encontrado.')
+        else:
+            if atual.baixo is None:
+                print('O diretório não há arquivos.')
+            else:
+                atual = atual.baixo
+                while atual is not None:
+                    self.descriptografar(atual)
+                    print(atual)
+                    print()
+                    atual = atual.prox
+
+    def buscar_arquivo(self, nome):
+        atual = self.head
+
+        if atual is None:
+            print('Não há nada.')
+        else:
+            while atual is not None:
+                arq = atual.baixo
+                while arq is not None:
+                    if arq.nome == nome:
+                        self.descriptografar(arq)
+                        return arq
+                    arq = arq.prox
+                atual = atual.prox
+            if atual is None:
+                print('Arquivo não encontrado.')
+
+
+
+
+
+
+
+
+
+
+imagens = Diretorio('Imagens')
+downloads = Diretorio('Downloads')
+jogos = Diretorio('Jogos')
+
+foto1 = Arquivo('Zeus', 'arquivo', 'Imagem mitológica', 32, 'Deus da mitologia', imagens)
 foto2 = Arquivo('Paisagem', 'arquivo', 'Imagem de paisagem', 95, 'Lago', imagens)
 foto3 = Arquivo('Coca-Cola', 'arquivo', 'Imagem de refrigerante', 12, 'Lata de coca', imagens)
 foto4 = Arquivo('Pepsi', 'arquivo', 'Imagem de refrigerante', 12, 'Lata de pepsi', imagens)
 
 
-sistema = ListaEncadeada()
-sistema.adicionar_diretorio(imagens)
 
-sistema.adicionar_arquivo(foto, imagens)
-sistema.adicionar_arquivo(foto2, imagens)
-sistema.adicionar_arquivo(foto3, imagens)
-sistema.adicionar_arquivo(foto4, imagens)
+
+sistema = SistemaArquivos('123')
+sistema.adicionar_diretorio(imagens)
+sistema.adicionar_diretorio(downloads)
+sistema.adicionar_diretorio(jogos)
+
+print()
+
+sistema.gravar_arquivo_cifrado(foto1, imagens, sistema.chave)
+sistema.gravar_arquivo_cifrado(foto2, imagens, sistema.chave)
+sistema.gravar_arquivo_cifrado(foto3, imagens, sistema.chave)
+sistema.gravar_arquivo_cifrado(foto4, imagens, sistema.chave)
+
+print()
+
+sistema.listar_diretorios()
+print()
+
+sistema.listar_arquivos(imagens)
+
+sistema.revogar_chave()
+print()
+sistema.gerar_chave_criptografia()
+print()
+sistema.listar_arquivos(imagens)
+print()
+print(sistema.buscar_arquivo('Paisagem'))
