@@ -1,0 +1,197 @@
+from datetime import datetime, timedelta
+import cryptocode
+
+class Diretorio:
+    def __init__(self, nome):
+        self.nome = nome
+
+class Arquivo:
+    def __init__(self, nome="", tipo="", descricao='', tamanho=0, conteudo="", diretorio=None, chave=None):
+        self.nome = nome
+        self.tipo = tipo
+        self.descricao = descricao
+        self.tamanho = tamanho
+        self.conteudo = conteudo
+        self.data = datetime.now()
+        self.diretorio = diretorio
+        self.chave = chave
+
+    def __str__(self):
+        return f"Nome: {self.nome}\nTipo: {self.tipo}\nTamanho: {self.tamanho} bytes\nData de Criação: {self.data}\nDiretório: {self.diretorio}"
+
+class ChaveCriptografia:
+    def __init__(self, chave=''):
+        self.chave = chave
+        self.criacao = datetime.now()
+        self.validade = self.criacao + timedelta(days=180)
+
+class HashTable:
+    def __init__(self, size):
+        self.size = size
+        self.table = [[] for _ in range(size)]
+
+    def _hash_function(self, key):
+        return hash(key) % self.size
+
+    def adicionar_arquivo(self, arquivo):
+        index = self._hash_function(arquivo.diretorio)  # Usando diretório para calcular o índice
+
+        if arquivo.chave is None:
+            print("Chave de criptografia não foi gerada. Não é possível adicionar o arquivo.")
+            return
+
+        # Verificar se o diretório existe e criar caso não exista
+        diretorio_existe = False
+        for slot in self.table:
+            for arquivo_existente in slot:
+                if cryptocode.decrypt(arquivo_existente[-1], self.chave.chave) == arquivo.diretorio:
+                    diretorio_existe = True
+                    break
+        if not diretorio_existe:
+            atributos_diretorio = []
+            atributos_diretorio.append(cryptocode.encrypt(arquivo.diretorio, self.chave.chave))
+            self.table[index].append(atributos_diretorio)
+
+        # Criptografar e adicionar os atributos do arquivo
+        atributos = []
+        atributos.append(cryptocode.encrypt(arquivo.nome, arquivo.chave.chave))
+        atributos.append(cryptocode.encrypt(arquivo.tipo, arquivo.chave.chave))
+        atributos.append(cryptocode.encrypt(arquivo.descricao, arquivo.chave.chave))
+        atributos.append(cryptocode.encrypt(str(arquivo.tamanho), arquivo.chave.chave))
+        atributos.append(cryptocode.encrypt(arquivo.conteudo, arquivo.chave.chave))
+        atributos.append(cryptocode.encrypt(arquivo.diretorio, arquivo.chave.chave))
+
+        self.table[index].append(atributos)
+
+    def remover_arquivo(self, diretorio=None): # remove diretórios
+        index = self._hash_function(diretorio)
+        if self.table[index] is not None:
+            for i, file in enumerate(self.table[index]):
+                self.table[index].pop(i)
+                return self.remover_arquivo(diretorio)
+
+    def buscar_arquivos(self, palavra_chave):
+        encontrados = []
+        for slot in self.table:
+            for arquivo in slot:
+                atributos_descriptografados = []
+                for atributo in arquivo:
+                    atributo_descriptografado = cryptocode.decrypt(atributo, self.chave.chave)
+                    atributos_descriptografados.append(atributo_descriptografado)
+                arquivo_descriptografado = Arquivo(*atributos_descriptografados)
+                arquivo_descriptografado.chave = self.chave
+                if palavra_chave.lower() in arquivo_descriptografado.nome.lower():
+                    encontrados.append(arquivo_descriptografado)
+        if encontrados:
+            print("Arquivos encontrados:")
+            for arquivo in encontrados:
+                print(arquivo)
+        else:
+            print("Nenhum arquivo encontrado com a palavra-chave fornecida.")
+
+    def listar_arquivos(self, chave=None):
+        for slot in self.table:
+            for arquivo in slot:
+                atributos_descriptografados = []
+                for atributo in arquivo:
+                    atributo_descriptografado = cryptocode.decrypt(atributo, chave)
+                    atributos_descriptografados.append(atributo_descriptografado)
+                arquivo_descriptografado = Arquivo(*atributos_descriptografados)
+                arquivo_descriptografado.chave = ChaveCriptografia(chave) if chave else None
+                print(arquivo_descriptografado)
+                print()
+
+class SistemaArquivos(HashTable):
+    def __init__(self, size):
+        super().__init__(size)
+        self.chave = None
+
+    def gerar_chave_criptografia(self):
+        self.chave = ChaveCriptografia(input("Digite a chave de criptografia: "))
+        print("Chave de criptografia gerada com sucesso.")
+
+    def revogar_chave(self):
+        self.chave = None
+        print("Chave de criptografia revogada com sucesso.")
+
+    def adicionar_arquivo(self, arquivo):
+        if self.chave is not None:
+            arquivo.chave = self.chave
+            super().adicionar_arquivo(arquivo)
+        else:
+            print("Chave de criptografia não foi gerada. Não é possível adicionar o arquivo.")
+
+    def exibir_diretorios(self):
+        diretorios = set()
+        for slot in self.table:
+            for arquivo in slot:
+                diretorio_descriptografado = cryptocode.decrypt(arquivo[-1], self.chave.chave)
+                diretorios.add(diretorio_descriptografado)
+        print("Diretórios disponíveis:")
+        for diretorio in diretorios:
+            print(diretorio)
+        print()
+
+    def listar_arquivos(self, chave=None):
+        if self.chave is not None and chave == self.chave.chave:
+            super().listar_arquivos(chave)
+        else:
+            super().listar_arquivos(None)
+
+    def decifrar_arquivo(self, diretorio, nome_arquivo):
+        index = self._hash_function(diretorio)
+        for arquivo in self.table[index]:
+            nome = cryptocode.decrypt(arquivo[0], self.chave.chave)
+            if nome == nome_arquivo:
+                atributos_descriptografados = []
+                for atributo in arquivo:
+                    atributo_descriptografado = cryptocode.decrypt(atributo, self.chave.chave)
+                    atributos_descriptografados.append(atributo_descriptografado)
+                arquivo_descriptografado = Arquivo(*atributos_descriptografados)
+                arquivo_descriptografado.chave = self.chave
+                print("Arquivo decifrado:")
+                print(arquivo_descriptografado)
+                return
+        print("Arquivo não encontrado.")
+
+
+imagens = Diretorio('Imagens')
+downloads = Diretorio('Downloads')
+
+foto = Arquivo('Zeus', 'arquivo', 'Imagem mitológica', 32, 'Deus da mitologia', imagens.nome)
+foto2 = Arquivo('Paisagem', 'arquivo', 'Imagem de paisagem', 95, 'Lago', imagens.nome)
+foto3 = Arquivo('Coca-Cola', 'arquivo', 'Imagem de refrigerante', 12, 'Lata de coca', imagens.nome)
+
+jogo = Arquivo('League of Legends', 'arquivo', 'Jogo de pc', 9000, 'Jogo', downloads.nome)
+texto = Arquivo('Arte da guerra', 'arquivo', 'livro digital', 9000, 'livro', downloads.nome)
+
+sistema = SistemaArquivos(10)
+
+sistema.gerar_chave_criptografia()
+
+
+sistema.adicionar_arquivo(foto)
+sistema.adicionar_arquivo(foto2)
+sistema.adicionar_arquivo(foto3)
+
+sistema.adicionar_arquivo(jogo)
+sistema.adicionar_arquivo(texto)
+
+print()
+sistema.exibir_diretorios()
+
+sistema.revogar_chave()
+print()
+
+print('Arquivos criptografados:')
+sistema.listar_arquivos()
+
+sistema.gerar_chave_criptografia()
+print('Arquivos descriptografados:')
+sistema.listar_arquivos(sistema.chave.chave)
+
+sistema.buscar_arquivos('Zeus')
+
+print()
+
+sistema.decifrar_arquivo('Imagens', 'Zeus')
